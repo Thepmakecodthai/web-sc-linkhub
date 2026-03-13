@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { HiArrowRight, HiMagnifyingGlass, HiHeart } from "react-icons/hi2" // เพิ่ม HiHeart
 
@@ -25,19 +25,45 @@ interface User {
 
 function getUserProfileUrl(user: User): string {
   if (user.username) {
-    return `/${user.username}`
+    return `/user/${user.username}`
   }
   return `/user/${user.id}`
 }
 
 interface HomeClientProps {
-  users: User[]
+  initialUsers: User[]
   session: any
 }
 
-export default function HomeClient({ users, session }: HomeClientProps) {
+export default function HomeClient({ initialUsers, session }: HomeClientProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState<"newest" | "mostLikes">("newest") // เปลี่ยนชื่อจาก mostLinks เป็น mostLikes
+  const [view, setView] = useState<"grid" | "list">("grid")
+  const [users, setUsers] = useState(initialUsers)
+
+  // Function to fetch users from API
+  const fetchUsers = useCallback(async () => {
+    try {
+      const response = await fetch('/api/users')
+      if (response.ok) {
+        const data = await response.json()
+        setUsers(data)
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error)
+    }
+  }, [])
+
+  // Listen for like updates from other pages
+  useEffect(() => {
+    const handleLikeUpdate = () => {
+      // Re-fetch users to get updated like counts
+      fetchUsers()
+    }
+
+    window.addEventListener('likeUpdated', handleLikeUpdate as EventListener)
+    return () => window.removeEventListener('likeUpdated', handleLikeUpdate as EventListener)
+  }, [fetchUsers])
 
   const filteredUsers = useMemo(() => {
     let filtered = users
@@ -102,6 +128,30 @@ export default function HomeClient({ users, session }: HomeClientProps) {
             Most Likes
           </button>
         </div>
+
+        {/* View Toggle */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setView("grid")}
+            className={`px-4 py-2 rounded-lg font-medium transition ${
+              view === "grid"
+                ? "bg-green-600 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            🔳 Grid
+          </button>
+          <button
+            onClick={() => setView("list")}
+            className={`px-4 py-2 rounded-lg font-medium transition ${
+              view === "list"
+                ? "bg-green-600 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            ☰ List
+          </button>
+        </div>
       </div>
 
       {/* Results Info */}
@@ -111,8 +161,8 @@ export default function HomeClient({ users, session }: HomeClientProps) {
         </p>
       </div>
 
-      {/* Users Grid */}
-      <div className="space-y-3">
+      {/* Users Grid/List */}
+      <div className={view === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}>
         {filteredUsers.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-gray-500 text-lg">
@@ -124,10 +174,12 @@ export default function HomeClient({ users, session }: HomeClientProps) {
             {filteredUsers.map((user) => (
               <div
                 key={user.id}
-                className="block p-6 bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg hover:border-blue-300 transition-all hover:-translate-y-1 group"
+                className={`block bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg hover:border-blue-300 transition-all hover:-translate-y-1 group ${
+                  view === "grid" ? "p-4" : "p-6"
+                }`}
               >
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div className="flex items-start gap-4 flex-1">
+                <div className={`flex items-start justify-between gap-4 mb-4 ${view === "grid" ? "flex-col" : ""}`}>
+                  <div className={`flex items-start gap-4 flex-1 ${view === "grid" ? "flex-col gap-2" : ""}`}>
                     {/* ข้อ 2: ปรับรูปโปรไฟล์ (เปลี่ยน rounded-full เป็น rounded-2xl เพื่อให้เป็นสี่เหลี่ยมมุมมน) */}
                     {user.image ? (
                       <img
@@ -142,32 +194,51 @@ export default function HomeClient({ users, session }: HomeClientProps) {
                     )}
                     
                     <div className="flex-1 min-w-0">
-                      <Link href={getUserProfileUrl(user)} className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition block">
+                      <Link href={getUserProfileUrl(user)} className={`font-bold text-gray-900 group-hover:text-blue-600 transition block ${view === "grid" ? "text-base" : "text-lg"}`}>
                         {user.name || "Creator"}
                       </Link>
-                      <p className="text-sm text-gray-500">{user.username ? `@${user.username}` : "No username set"}</p>
-                      <p className="text-xs text-gray-400 mt-1 truncate">{user.email}</p>
+                      <p className={`text-gray-500 ${view === "grid" ? "text-xs" : "text-sm"}`}>{user.username ? `@${user.username}` : "No username set"}</p>
+                      <p className={`text-gray-400 mt-1 truncate ${view === "grid" ? "text-[10px]" : "text-xs"}`}>{user.email}</p>
+
+                      {/* Badges for grid view */}
+                      {view === "grid" && (
+                        <div className="flex gap-1 mt-2">
+                          <div className="bg-pink-50 group-hover:bg-pink-100 px-2 py-1 rounded-lg transition border border-pink-100">
+                            <p className="text-xs font-bold text-pink-600 flex items-center justify-center gap-1">
+                              <HiHeart className="w-3 h-3" />
+                              {user.likes || 0}
+                            </p>
+                            <p className="text-[8px] text-pink-500 uppercase font-semibold text-center">Likes</p>
+                          </div>
+                          <div className="bg-blue-50 group-hover:bg-blue-100 px-2 py-1 rounded-lg transition border border-blue-100">
+                            <p className="text-xs font-bold text-blue-600 text-center">{user.links.length}</p>
+                            <p className="text-[8px] text-blue-500 uppercase font-semibold text-center">Links</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* ข้อ 1: แสดงจำนวน Like แทนจำนวน Link (หรือแสดงทั้งคู่) */}
-                  <div className="text-right flex-shrink-0 flex gap-2">
-                    <div className="bg-pink-50 group-hover:bg-pink-100 px-3 py-2 rounded-lg transition border border-pink-100">
-                      <p className="text-sm font-bold text-pink-600 flex items-center justify-end gap-1">
-                        <HiHeart className="w-3 h-3" />
-                        {user.likes || 0}
-                      </p>
-                      <p className="text-[10px] text-pink-500 uppercase font-semibold">Likes</p>
+                  {/* Badges for list view */}
+                  {view === "list" && (
+                    <div className="text-right flex-shrink-0 flex gap-2">
+                      <div className="bg-pink-50 group-hover:bg-pink-100 px-3 py-2 rounded-lg transition border border-pink-100">
+                        <p className="text-sm font-bold text-pink-600 flex items-center justify-end gap-1">
+                          <HiHeart className="w-3 h-3" />
+                          {user.likes || 0}
+                        </p>
+                        <p className="text-[10px] text-pink-500 uppercase font-semibold">Likes</p>
+                      </div>
+                      <div className="bg-blue-50 group-hover:bg-blue-100 px-3 py-2 rounded-lg transition border border-blue-100">
+                        <p className="text-sm font-bold text-blue-600">{user.links.length}</p>
+                        <p className="text-[10px] text-blue-500 uppercase font-semibold">Links</p>
+                      </div>
                     </div>
-                    <div className="bg-blue-50 group-hover:bg-blue-100 px-3 py-2 rounded-lg transition border border-blue-100">
-                      <p className="text-sm font-bold text-blue-600">{user.links.length}</p>
-                      <p className="text-[10px] text-blue-500 uppercase font-semibold">Links</p>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* ส่วนอื่นๆ คงเดิม... */}
-                {user.links.length > 0 && (
+                {user.links.length > 0 && view === "list" && (
                   <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
                     {user.links.slice(0, 2).map((link) => (
                       <div key={link.id} className="text-sm text-gray-600">
@@ -178,10 +249,10 @@ export default function HomeClient({ users, session }: HomeClientProps) {
                   </div>
                 )}
 
-                <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className={`pt-4 border-t border-gray-100 ${view === "grid" ? "mt-2" : "mt-4"}`}>
                   <Link
                     href={getUserProfileUrl(user)}
-                    className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm group/btn"
+                    className={`inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium group/btn ${view === "grid" ? "text-xs" : "text-sm"}`}
                   >
                     View Profile
                     <HiArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition" />

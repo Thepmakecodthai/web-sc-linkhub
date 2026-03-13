@@ -10,8 +10,24 @@ export default async function Home() {
     orderBy: { createdAt: "desc" },
     include: {
       links: true,
+      _count: {
+        select: { likesReceived: true }
+      }
     },
   })
+
+  // Transform data to match HomeClient interface
+  const transformedUsers = users.map(user => ({
+    id: user.id,
+    name: user.name,
+    username: user.username,
+    email: user.email,
+    image: user.image,
+    bio: user.bio,
+    links: user.links,
+    likes: user._count.likesReceived,
+    createdAt: user.createdAt.toISOString(),
+  }))
 
   return (
     <div className="min-h-screen bg-linear-to-b from-blue-50 to-white">
@@ -65,7 +81,7 @@ export default async function Home() {
         </div>
 
         {/* Search and Users */}
-        <HomeClient users={users as any} session={session} />
+        <HomeClient initialUsers={transformedUsers} session={session} />
       </div>
 
       {/* Footer */}

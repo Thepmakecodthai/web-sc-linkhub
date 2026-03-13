@@ -45,7 +45,7 @@ export default async function UserPage({
     },
     include: {
       links: {
-        orderBy: { order: "asc" },
+        orderBy: { createdAt: "desc" },
       },
     },
   })

@@ -8,7 +8,6 @@ export async function POST(req: Request) {
     data: {
       title: body.title,
       url: body.url,
-      order: 0,
       userId: body.userId,
     },
   })

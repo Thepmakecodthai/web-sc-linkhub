@@ -2,10 +2,6 @@ import { getAuthSession } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
 
-// app/api/user/profile/route.ts
-
-// app/api/user/profile/route.ts
-// app/api/user/profile/route.ts
 export async function GET() {
   try {
     const session = await getAuthSession();
@@ -13,14 +9,13 @@ export async function GET() {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      // ลองเรียกแค่ 3 อย่างนี้ดูก่อน ถ้าผ่านแปลว่าคอลัมน์อื่น (เช่น likes) มีปัญหา
       select: {
         id: true,
         name: true,
         email: true,
         username: true,
-        // bio: true,    <-- ลองปิดไว้ก่อน
-        // likes: true,  <-- ลองปิดไว้ก่อน
+        bio: true,
+        likes: true,
       }
     });
 

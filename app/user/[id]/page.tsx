@@ -2,14 +2,29 @@ import { prisma } from "@/lib/prisma"
 import { getAuthSession } from "@/lib/auth"
 import Link from "next/link"
 import { HiArrowLeft } from "react-icons/hi2"
+import LikeButton from "../../components/LikeButton"
 
 export default async function UserProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const session = await getAuthSession()
-  const user = await prisma.user.findUnique({
-    where: { id },
-    include: { links: true },
+  const user = await prisma.user.findFirst({
+    where: { 
+      OR: [
+        { username: id },
+        { id: id }
+      ]
+    },
+    include: { 
+      links: true,
+      _count: {
+        select: { likesReceived: true }
+      }
+    },
   })
+
+  const likesCount = user?._count?.likesReceived || 0
+
+  console.log('UserProfilePage:', { id, session: !!session, user: !!user })
 
   if (!user) {
     return (
@@ -75,10 +90,20 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
               </div>
             )}
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-900 mb-1">{user.name || "Creator"}</h1>
-              {user.username && <p className="text-gray-600 text-lg mb-2">@{user.username}</p>}
-              <p className="text-gray-500 mb-4">{user.email}</p>
-              {user.bio && <p className="text-gray-700 mb-4 leading-relaxed">{user.bio}</p>}
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 mb-1">{user.name || "Creator"}</h1>
+                  {user.username && <p className="text-gray-600 text-lg mb-2">@{user.username}</p>}
+                  <p className="text-gray-500 mb-4">{user.email}</p>
+                  {user.bio && <p className="text-gray-700 mb-4 leading-relaxed">{user.bio}</p>}
+                </div>
+                <LikeButton
+                  key={`like-${user.id}`}
+                  targetUserId={user.id}
+                  initialLikes={likesCount}
+                  isLoggedIn={!!session}
+                />
+              </div>
               <div className="inline-block bg-blue-50 px-4 py-2 rounded-lg">
                 <p className="text-blue-600 font-semibold text-lg">{user.links.length}</p>
                 <p className="text-blue-500 text-sm">link{user.links.length !== 1 ? "s" : ""}</p>

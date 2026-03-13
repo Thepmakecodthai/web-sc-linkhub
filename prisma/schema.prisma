@@ -14,6 +14,7 @@ model User {
   username      String?   @unique 
   password      String?
   image         String?
+  bio           String?
   likes         Int       @default(0) 
   
   // เพิ่ม 2 บรรทัดนี้เพื่อแก้ Error P1012
@@ -21,6 +22,8 @@ model User {
   sessions      Session[]
 
   links         Link[]
+  likesGiven    Like[]    @relation("UserLikes")
+  likesReceived Like[]   @relation("LikedUser")
   createdAt     DateTime  @default(now())
   updatedAt  DateTime @updatedAt
 }
@@ -35,6 +38,17 @@ model Link {
 
   
   @@unique([userId, url]) 
+}
+
+model Like {
+  id           String   @id @default(cuid())
+  likerId      String
+  likedUserId  String
+  liker        User     @relation("UserLikes", fields: [likerId], references: [id], onDelete: Cascade)
+  likedUser    User     @relation("LikedUser", fields: [likedUserId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  @@unique([likerId, likedUserId])
 }
 
 
