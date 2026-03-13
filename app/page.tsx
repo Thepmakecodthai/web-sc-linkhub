@@ -21,7 +21,7 @@ export default async function Home() {
     id: user.id,
     name: user.name,
     username: user.username,
-    email: user.email,
+    email: user.email ?? "",
     image: user.image,
     bio: user.bio,
     links: user.links,

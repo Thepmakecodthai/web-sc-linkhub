@@ -11,46 +11,41 @@ model User {
   id            String    @id @default(cuid())
   name          String?
   email         String?   @unique
-  username      String?   @unique 
+  username      String?   @unique
   password      String?
   image         String?
   bio           String?
-  likes         Int       @default(0) 
-  
-  // เพิ่ม 2 บรรทัดนี้เพื่อแก้ Error P1012
-  accounts      Account[]
-  sessions      Session[]
-
-  links         Link[]
-  likesGiven    Like[]    @relation("UserLikes")
-  likesReceived Like[]   @relation("LikedUser")
+  likes         Int       @default(0)
   createdAt     DateTime  @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  likesReceived Like[]    @relation("LikedUser")
+  likesGiven    Like[]    @relation("UserLikes")
+  links         Link[]
+  sessions      Session[]
 }
 
 model Link {
   id        String   @id @default(cuid())
   title     String
-  url       String   
+  url       String
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  
-  @@unique([userId, url]) 
+  @@unique([userId, url])
 }
 
 model Like {
-  id           String   @id @default(cuid())
-  likerId      String
-  likedUserId  String
-  liker        User     @relation("UserLikes", fields: [likerId], references: [id], onDelete: Cascade)
-  likedUser    User     @relation("LikedUser", fields: [likedUserId], references: [id], onDelete: Cascade)
-  createdAt    DateTime @default(now())
+  id          String   @id @default(cuid())
+  likerId     String
+  likedUserId String
+  createdAt   DateTime @default(now())
+  likedUser   User     @relation("LikedUser", fields: [likedUserId], references: [id], onDelete: Cascade)
+  liker       User     @relation("UserLikes", fields: [likerId], references: [id], onDelete: Cascade)
 
   @@unique([likerId, likedUserId])
 }
-
 
 model Account {
   id                String  @id @default(cuid())
@@ -65,8 +60,7 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -76,8 +70,7 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
